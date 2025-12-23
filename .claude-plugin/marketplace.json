@@ -1,10 +1,10 @@
 {
-  "name": "ado-local",
+  "name": "ms-ado-az",
   "owner": {
     "name": "Joshua Ramirez"
   },
   "metadata": {
-    "description": "Local ADO work items plugins",
+    "description": "Azure DevOps plugin using Azure CLI",
     "version": "1.0.0"
   },
   "plugins": [
