@@ -1,0 +1,9 @@
+{
+  "name": "ado-work-items",
+  "version": "1.0.0",
+  "description": "Azure DevOps work item management - query, create, update, search work items via CLI and REST API",
+  "author": {
+    "name": "Joshua Ramirez"
+  },
+  "keywords": ["azure-devops", "ado", "work-items", "boards", "backlogs", "sprints"]
+}

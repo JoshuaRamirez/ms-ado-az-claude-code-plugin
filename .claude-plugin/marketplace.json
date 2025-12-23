@@ -1,0 +1,23 @@
+{
+  "name": "ado-local",
+  "owner": {
+    "name": "Joshua Ramirez"
+  },
+  "metadata": {
+    "description": "Local ADO work items plugins",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "ado-work-items",
+      "source": "./",
+      "description": "Azure DevOps work item management via CLI and REST API",
+      "version": "1.0.0",
+      "author": {
+        "name": "Joshua Ramirez"
+      },
+      "keywords": ["azure-devops", "ado", "work-items", "boards", "backlogs", "sprints"],
+      "category": "integrations"
+    }
+  ]
+}
