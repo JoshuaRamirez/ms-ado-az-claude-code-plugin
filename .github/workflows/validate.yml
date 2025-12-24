@@ -1,0 +1,246 @@
+name: Validate Plugin
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate plugin.json structure
+        run: |
+          echo "Validating plugin.json structure..."
+
+          PLUGIN_FILE=".claude-plugin/plugin.json"
+
+          if [ ! -f "$PLUGIN_FILE" ]; then
+            echo "ERROR: $PLUGIN_FILE not found"
+            exit 1
+          fi
+
+          # Validate JSON syntax
+          if ! node -e "JSON.parse(require('fs').readFileSync('$PLUGIN_FILE', 'utf8'))"; then
+            echo "ERROR: $PLUGIN_FILE contains invalid JSON"
+            exit 1
+          fi
+
+          # Check required fields
+          node -e "
+            const plugin = JSON.parse(require('fs').readFileSync('$PLUGIN_FILE', 'utf8'));
+            const required = ['name', 'version', 'description'];
+            const missing = required.filter(f => !plugin[f]);
+            if (missing.length > 0) {
+              console.error('ERROR: Missing required fields in plugin.json:', missing.join(', '));
+              process.exit(1);
+            }
+            console.log('plugin.json validation passed');
+            console.log('  name:', plugin.name);
+            console.log('  version:', plugin.version);
+            console.log('  description:', plugin.description);
+          "
+
+      - name: Validate marketplace.json (if exists)
+        run: |
+          MARKETPLACE_FILE=".claude-plugin/marketplace.json"
+
+          if [ -f "$MARKETPLACE_FILE" ]; then
+            echo "Validating marketplace.json..."
+
+            if ! node -e "JSON.parse(require('fs').readFileSync('$MARKETPLACE_FILE', 'utf8'))"; then
+              echo "ERROR: $MARKETPLACE_FILE contains invalid JSON"
+              exit 1
+            fi
+
+            echo "marketplace.json validation passed"
+          else
+            echo "No marketplace.json found (optional)"
+          fi
+
+      - name: Validate command files have required frontmatter
+        run: |
+          echo "Validating command files..."
+
+          ERRORS=0
+
+          # Find all .md files in commands directory
+          while IFS= read -r -d '' file; do
+            echo "Checking: $file"
+
+            # Check if file starts with frontmatter delimiter
+            if ! head -1 "$file" | grep -q "^---$"; then
+              echo "  ERROR: Missing frontmatter (must start with ---)"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            # Extract frontmatter (content between first and second ---)
+            FRONTMATTER=$(awk '/^---$/{p=!p; if(p) next; else exit} p' "$file")
+
+            if [ -z "$FRONTMATTER" ]; then
+              echo "  ERROR: Empty or malformed frontmatter"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            # Check for required 'description' field
+            if ! echo "$FRONTMATTER" | grep -q "^description:"; then
+              echo "  ERROR: Missing required 'description' field in frontmatter"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            # Check for required 'allowed-tools' field
+            if ! echo "$FRONTMATTER" | grep -q "^allowed-tools:"; then
+              echo "  ERROR: Missing required 'allowed-tools' field in frontmatter"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            echo "  OK"
+
+          done < <(find commands -name "*.md" -type f -print0 2>/dev/null)
+
+          if [ $ERRORS -gt 0 ]; then
+            echo ""
+            echo "FAILED: $ERRORS command file(s) have validation errors"
+            exit 1
+          fi
+
+          echo ""
+          echo "All command files validated successfully"
+
+      - name: Validate skill files have required frontmatter
+        run: |
+          echo "Validating skill files..."
+
+          ERRORS=0
+
+          # Find all SKILL.md files in skills directory
+          while IFS= read -r -d '' file; do
+            echo "Checking: $file"
+
+            # Check if file starts with frontmatter delimiter
+            if ! head -1 "$file" | grep -q "^---$"; then
+              echo "  ERROR: Missing frontmatter (must start with ---)"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            # Extract frontmatter
+            FRONTMATTER=$(awk '/^---$/{p=!p; if(p) next; else exit} p' "$file")
+
+            if [ -z "$FRONTMATTER" ]; then
+              echo "  ERROR: Empty or malformed frontmatter"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            # Check for required 'name' field
+            if ! echo "$FRONTMATTER" | grep -q "^name:"; then
+              echo "  ERROR: Missing required 'name' field in frontmatter"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            # Check for required 'description' field
+            if ! echo "$FRONTMATTER" | grep -q "^description:"; then
+              echo "  ERROR: Missing required 'description' field in frontmatter"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            echo "  OK"
+
+          done < <(find skills -name "SKILL.md" -type f -print0 2>/dev/null)
+
+          if [ $ERRORS -gt 0 ]; then
+            echo ""
+            echo "FAILED: $ERRORS skill file(s) have validation errors"
+            exit 1
+          fi
+
+          echo ""
+          echo "All skill files validated successfully"
+
+      - name: Validate agent files have required frontmatter
+        run: |
+          echo "Validating agent files..."
+
+          ERRORS=0
+
+          # Find all .md files in agents directory
+          while IFS= read -r -d '' file; do
+            echo "Checking: $file"
+
+            # Check if file starts with frontmatter delimiter
+            if ! head -1 "$file" | grep -q "^---$"; then
+              echo "  ERROR: Missing frontmatter (must start with ---)"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            # Extract frontmatter
+            FRONTMATTER=$(awk '/^---$/{p=!p; if(p) next; else exit} p' "$file")
+
+            if [ -z "$FRONTMATTER" ]; then
+              echo "  ERROR: Empty or malformed frontmatter"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            # Check for required 'name' field
+            if ! echo "$FRONTMATTER" | grep -q "^name:"; then
+              echo "  ERROR: Missing required 'name' field in frontmatter"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            # Check for required 'description' field
+            if ! echo "$FRONTMATTER" | grep -q "^description:"; then
+              echo "  ERROR: Missing required 'description' field in frontmatter"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            echo "  OK"
+
+          done < <(find agents -name "*.md" -type f -print0 2>/dev/null)
+
+          if [ $ERRORS -gt 0 ]; then
+            echo ""
+            echo "FAILED: $ERRORS agent file(s) have validation errors"
+            exit 1
+          fi
+
+          echo ""
+          echo "All agent files validated successfully"
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "Plugin Validation Summary"
+          echo "=========================================="
+          echo ""
+          echo "Commands:"
+          find commands -name "*.md" -type f 2>/dev/null | wc -l | xargs echo "  Total command files:"
+          echo ""
+          echo "Skills:"
+          find skills -name "SKILL.md" -type f 2>/dev/null | wc -l | xargs echo "  Total skill files:"
+          echo ""
+          echo "Agents:"
+          find agents -name "*.md" -type f 2>/dev/null | wc -l | xargs echo "  Total agent files:"
+          echo ""
+          echo "All validations passed!"
