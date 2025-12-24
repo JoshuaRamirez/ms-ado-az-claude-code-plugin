@@ -23,6 +23,24 @@ description: Build and execute WIQL (Work Item Query Language) queries for Azure
 
 3. **Only flat queries supported** - The CLI only supports flat queries, not tree/hierarchical queries.
 
+4. **NO LIKE OPERATOR** - WIQL does NOT support SQL-style LIKE patterns. Use CONTAINS instead:
+   ```sql
+   -- DOES NOT WORK:
+   WHERE [System.Title] LIKE '%keyword%'
+
+   -- USE THIS INSTEAD:
+   WHERE [System.Title] CONTAINS 'keyword'
+   ```
+
+5. **CANNOT ORDER BY System.Parent** - Sorting by parent ID is not supported:
+   ```sql
+   -- DOES NOT WORK:
+   ORDER BY [System.Parent]
+
+   -- WORKAROUND: Filter by parent IDs with IN clause, sort client-side
+   WHERE [System.Parent] IN (1234, 1235, 1236) ORDER BY [System.Id]
+   ```
+
 ## Basic Query Syntax
 
 ```bash
@@ -137,3 +155,17 @@ az boards query --wiql "SELECT [System.Id], [System.Title] FROM workitems WHERE 
 3. **Escape single quotes by doubling**: `'It''s working'`
 4. **Path separators use backslash**: `'Project\Team\SubArea'` (double in bash: `'Project\\Team'`)
 5. **Always include project filter**: Add `[System.TeamProject] = 'Name'` for reliable results
+
+## Parent Filtering Pattern
+
+Since ORDER BY [System.Parent] is not supported, use the IN clause to filter by parent:
+
+```bash
+# Find all children of specific parents
+az boards query --wiql "SELECT [System.Id], [System.Title], [System.Parent] FROM WorkItems WHERE [System.Parent] IN (1234, 1235, 1236) AND [System.TeamProject] = 'ProjectName'" -o table
+```
+
+This works well for:
+- Finding all tasks under specific features
+- Listing child items for a set of parent work items
+- Building hierarchies by querying children of known parents

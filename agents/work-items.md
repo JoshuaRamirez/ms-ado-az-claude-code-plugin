@@ -142,4 +142,57 @@ For POST/PUT with invoke:
 - `@Me` - Current user
 - `@Today` - Today's date
 - `@CurrentIteration` - Current sprint
-- `@Project` - Current project
+- `@Project` - Current project (UNRELIABLE - use explicit project name)
+
+## WIQL Limitations
+
+**Not supported:**
+- `LIKE` operator - Use `CONTAINS` instead
+- `ORDER BY [System.Parent]` - Cannot sort by parent; filter with IN clause instead
+- `TOP N` clause - Pipe to `head -N` instead
+
+**Working alternatives:**
+```sql
+-- Instead of LIKE, use CONTAINS:
+WHERE [System.Title] CONTAINS 'keyword'
+
+-- Instead of ORDER BY Parent, filter by parent IDs:
+WHERE [System.Parent] IN (1234, 1235, 1236)
+```
+
+## Board Columns - Key Learnings
+
+**Critical Understanding:**
+- Board columns are NOT directly settable fields
+- System.BoardColumn is derived from state-to-column mappings
+- To move an item to a column, change its state to a state mapped to that column
+
+**Discovery Commands:**
+```bash
+# Get board column mappings
+az devops invoke --area work --resource columns \
+  --route-parameters project={P} team={T} board={BoardName} \
+  --api-version 7.1 -o json
+
+# Find Kanban column fields (team-specific GUIDs)
+az boards work-item show --id {ID} -o json | grep -i "WEF_"
+```
+
+## Efficient Bulk Operations
+
+**Performance Tip:** Direct bash loops are ~10x faster than sub-agents.
+
+```bash
+# Fast bulk state update
+for id in 1858 1859 1860; do
+  az boards work-item update --id $id --state "Done" -o none && echo "Updated $id"
+done
+```
+
+Use `-o none` to suppress JSON output for faster execution.
+
+## CLI Gotchas
+
+- `--project` flag NOT supported on `az boards work-item show`
+- `--fields` and `--expand` cannot be used together
+- `az boards board column list` command does not exist

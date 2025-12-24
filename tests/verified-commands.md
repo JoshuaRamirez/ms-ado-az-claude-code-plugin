@@ -186,3 +186,66 @@ A consolidated reference of CLI behavior that may be unexpected:
 | Comments API returns 404 | `az devops invoke` to `/wit/workItems/{id}/comments` | 404 Not Found | Use `--discussion` flag on `az boards work-item update` instead |
 | Relation types use friendly names | Use reference name like `System.LinkTypes.Hierarchy-Reverse` | May fail or behave unexpectedly | Use friendly names: `"Parent"`, `"Child"`, `"Related"` |
 | `@project` macro unreliable | WIQL uses `@project` to reference current project | Sometimes fails to resolve | Use explicit project name in WIQL WHERE clause |
+| `--project` on work-item show | Expect `--project` flag support | `error: unrecognized arguments: --project` | Omit `--project`; defaults are used automatically |
+| `--fields` with `--expand` | Use both flags together | Cannot be used together (API restriction) | Use `--expand` alone, then filter JSON output |
+| Setting System.BoardColumn directly | Set board column via field update | Column is derived from state; not directly settable | Change `System.State` to a state mapped to target column |
+| `az boards board column list` | CLI command exists | Command doesn't exist | Use `az devops invoke --area work --resource columns` |
+| `az devops invoke` with PATCH | Expect PATCH support | KeyError issues on some resources | Use update CLI commands or POST with appropriate resources |
+| WIQL `LIKE` operator | SQL-style LIKE support | Not supported | Use `CONTAINS` instead |
+| WIQL `ORDER BY [System.Parent]` | Sort by parent ID | Not supported | Filter by parent with IN clause, sort client-side |
+
+## Board Column Behavior
+
+Board columns work differently than expected:
+
+1. **Board columns are mapped to states** - Each board has a configuration mapping columns to states
+2. **Cannot directly set System.BoardColumn** - It's a derived field controlled by state-to-column mappings
+3. **Different boards have different column configurations** - Features board vs Stories board may differ
+4. **Kanban column fields have team-specific GUIDs** - Format: `WEF_{GUID}_Kanban.Column`
+
+### Discovering Board Column Mappings
+
+```bash
+# List boards for a team
+az devops invoke --area work --resource boards \
+  --route-parameters project=ProjectName team="Team Name" \
+  --api-version 7.1 -o json
+
+# Get column configuration for a specific board
+az devops invoke --area work --resource columns \
+  --route-parameters project=ProjectName team="Team Name" board=Features \
+  --api-version 7.1 -o json
+```
+
+## Efficient Bulk Operations
+
+### Performance Insight
+Direct bash for loops are approximately **10x faster** than using sub-agents for bulk operations.
+
+### Recommended Patterns
+
+```bash
+# Fast bulk state update (use -o none to suppress output for speed)
+for id in 1858 1859 1860; do
+  az boards work-item update --id $id --state "Done" -o none && echo "Updated $id"
+done
+
+# Query with table output for quick counts
+az boards query --wiql "SELECT [System.Id] FROM WorkItems WHERE ..." --output table | wc -l
+
+# Find field names on a work item
+az boards work-item show --id 1847 -o json | grep -i "column\|board\|kanban"
+```
+
+## Field Discovery Techniques
+
+```bash
+# Find all fields containing a keyword
+az boards work-item show --id {ID} -o json | grep -i "keyword"
+
+# Get full JSON and search for field patterns
+az boards work-item show --id {ID} -o json | jq 'keys'
+
+# Discover Kanban column field names (team-specific GUIDs)
+az boards work-item show --id {ID} -o json | grep -i "WEF_"
+```
