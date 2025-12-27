@@ -196,3 +196,60 @@ Use `-o none` to suppress JSON output for faster execution.
 - `--project` flag NOT supported on `az boards work-item show`
 - `--fields` and `--expand` cannot be used together
 - `az boards board column list` command does not exist
+
+## JSON Filtering with --query (JMESPath)
+
+**Important:** Windows does not have `jq` by default. Always use Azure CLI's built-in `--query` parameter with JMESPath syntax instead of piping to `jq`.
+
+### Output Formats
+
+| Format | Flag | Use Case |
+|--------|------|----------|
+| Single value | `-o tsv` | Extract one field for scripting |
+| Human-readable list | `-o table` | Display results to user |
+| Full data | `-o json` | Get complete response for processing |
+
+### Common JMESPath Patterns
+
+```bash
+# Get a single field value
+az boards work-item show --id 123 --query "fields.\"System.Title\"" -o tsv
+
+# Get multiple fields
+az boards work-item show --id 123 --query "{id:id, title:fields.\"System.Title\", state:fields.\"System.State\"}" -o json
+
+# Get field from array results
+az boards query --wiql "..." --query "[].fields.\"System.Title\"" -o json
+
+# First N results (instead of TOP N which WIQL doesn't support)
+az boards query --wiql "..." --query "[:10]" -o json
+
+# Filter array by condition
+az boards query --wiql "..." --query "[?fields.\"System.State\" == 'Active']" -o json
+
+# Get all field names from a work item
+az boards work-item show --id 123 --query "keys(fields)" -o json
+
+# Extract IDs only from query results
+az boards query --wiql "..." --query "[].id" -o tsv
+
+# Project specific fields from array
+az boards query --wiql "..." --query "[].{id:id, title:fields.\"System.Title\"}" -o table
+```
+
+### JMESPath vs jq Reference
+
+| Task | jq (NOT available on Windows) | --query (JMESPath) |
+|------|-------------------------------|-------------------|
+| Get field | `jq '.fields["System.Title"]'` | `--query "fields.\"System.Title\""` |
+| First N items | `jq '.[0:10]'` | `--query "[:10]"` |
+| Filter by value | `jq '.[] \| select(.state == "Active")'` | `--query "[?state == 'Active']"` |
+| Get keys | `jq 'keys'` | `--query "keys(@)"` |
+| Map to new shape | `jq '{id, title}'` | `--query "{id:id, title:title}"` |
+
+### Escaping Field Names
+
+Field names with dots (like `System.Title`) require escaping in JMESPath:
+- Use backslash-escaped quotes: `--query "fields.\"System.Title\""`
+- On Windows CMD, may need: `--query "fields.\"System.Title\""`
+- On PowerShell, use single outer quotes: `--query 'fields."System.Title"'`

@@ -132,10 +132,9 @@ echo "Will update $count items"
 ### Don't Parse Full JSON for Each Update
 
 ```bash
-# SLOW - full JSON parsing
+# SLOW - full JSON parsing with extra extraction
 for id in 1001 1002 1003; do
-  result=$(az boards work-item update --id $id --state "Done" -o json)
-  echo "$result" | jq '.id'  # Unnecessary if you already know the ID
+  az boards work-item update --id $id --state "Done" --query "id" -o tsv  # Unnecessary if you already know the ID
 done
 
 # FAST - suppress output

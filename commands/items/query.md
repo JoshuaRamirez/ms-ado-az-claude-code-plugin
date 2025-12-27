@@ -223,15 +223,15 @@ az boards query --id {QUERY_GUID} -o json
 **Not Supported:**
 - `LIKE` operator - Use `CONTAINS` instead
 - `ORDER BY [System.Parent]` - Cannot sort by parent
-- `TOP N` clause - Filter results with jq or head
+- `TOP N` clause - Use `--query` with JMESPath slice syntax
 
 **Workarounds:**
 ```bash
 # Instead of LIKE, use CONTAINS:
 WHERE [System.Title] CONTAINS 'keyword'
 
-# Instead of TOP N, pipe to jq:
-az boards query --wiql "..." -o json | jq '.[0:10]'
+# Instead of TOP N, use JMESPath slice:
+az boards query --wiql "..." --query "[:10]" -o json
 ```
 
 ## Tips

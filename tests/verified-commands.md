@@ -243,8 +243,11 @@ az boards work-item show --id 1847 -o json | grep -i "column\|board\|kanban"
 # Find all fields containing a keyword
 az boards work-item show --id {ID} -o json | grep -i "keyword"
 
-# Get full JSON and search for field patterns
-az boards work-item show --id {ID} -o json | jq 'keys'
+# Get all field names using --query (JMESPath)
+az boards work-item show --id {ID} --query "keys(fields)" -o json
+
+# Get specific field value
+az boards work-item show --id {ID} --query "fields.\"System.Title\"" -o tsv
 
 # Discover Kanban column field names (team-specific GUIDs)
 az boards work-item show --id {ID} -o json | grep -i "WEF_"
