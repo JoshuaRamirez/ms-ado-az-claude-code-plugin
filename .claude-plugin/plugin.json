@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "description": "Azure DevOps work item management - query, create, update, search work items via CLI and REST API",
   "author": {
-    "name": "Joshua Ramirez"
+    "name": "Joshua Ramirez",
+    "url": "https://github.com/JoshuaRamirez"
   },
+  "repository": "https://github.com/JoshuaRamirez/ms-ado-az-claude-code-plugin",
+  "license": "MIT",
   "keywords": ["azure-devops", "ado", "work-items", "boards", "backlogs", "sprints"]
 }
