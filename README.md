@@ -55,9 +55,15 @@ az devops configure --list
 
 ### From Claude Plugin Marketplace
 
+Add this repository with the GitHub `owner/repo` form (HTTPS):
+
 ```bash
-claude plugin marketplace add ms-ado-az
+claude plugin marketplace add JoshuaRamirez/ms-ado-az-claude-code-plugin
 ```
+
+Two forms that fail (do not use them):
+- `ms-ado-az` is an invalid marketplace source. Claude requires `owner/repo`, `https://...`, or `./path`.
+- `JoshuaRamirez/ms-ado-az` is the wrong repository, and Claude Code often clones it over SSH (`git@github.com`), which fails without GitHub SSH keys.
 
 ### From Local Source
 
@@ -190,6 +196,7 @@ Run `/ado:status` to verify:
 3. **"Please run 'az login' to setup account"** - Run `az login` to authenticate
 4. **"TF401019: The project does not exist"** - Check your project name is correct (case-sensitive)
 5. **"TF400813: Resource not available"** - Verify organization URL format is `https://dev.azure.com/orgname`
+6. **"Invalid marketplace source format"** or **"SSH authentication failed"** when adding the marketplace — use `claude plugin marketplace add JoshuaRamirez/ms-ado-az-claude-code-plugin`. The short name `ms-ado-az` is invalid; `JoshuaRamirez/ms-ado-az` is the wrong repo and often tries SSH.
 
 ### Re-authenticate
 
