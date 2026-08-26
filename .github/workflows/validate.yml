@@ -498,6 +498,65 @@ jobs:
           console.log('OK: no commands/**/*.md or agents/**/*.md teach az devops invoke --area work --resource boardcolumns');
           EOF
 
+      - name: Reject unverified search --resource casing on az devops invoke
+        run: |
+          echo "Checking command and agent files for az devops invoke --area search with non-lowercase --resource workitemsearchresults..."
+
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          function walk(dir, acc) {
+            if (!fs.existsSync(dir)) {
+              return acc;
+            }
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                walk(full, acc);
+              } else if (entry.isFile() && entry.name.endsWith('.md')) {
+                acc.push(full);
+              }
+            }
+            return acc;
+          }
+
+          const files = walk('commands', []).concat(walk('agents', []));
+          let failed = false;
+
+          for (const file of files) {
+            const folded = fs.readFileSync(file, 'utf8').replace(/\\\r?\n/g, ' ');
+            folded.split(/\r?\n/).forEach((line, idx) => {
+              if (!/\baz\s+devops\s+invoke\b/.test(line)) {
+                return;
+              }
+              const hasAreaSearch = /(^|[\s])--area(\s+|=)["']?search\b/.test(line);
+              // Flag form only: --resource … / --resource=….
+              // Quoted or unquoted. Reject any casing of workitemsearchresults
+              // other than the exact lowercase verified resource.
+              // Do not match prose that merely mentions work item search results.
+              const resourceMatch = line.match(/(^|[\s])--resource(\s+|=)["']?([A-Za-z0-9]+)/);
+              const resource = resourceMatch && resourceMatch[3];
+              const hasWrongCasing = resource &&
+                resource.toLowerCase() === 'workitemsearchresults' &&
+                resource !== 'workitemsearchresults';
+              if (hasAreaSearch && hasWrongCasing) {
+                console.error('ERROR: ' + file + ':' + (idx + 1) + ' teaches az devops invoke --area search --resource ' + resource + ' (use workitemsearchresults)');
+                console.error('  ' + line.trim());
+                failed = true;
+              }
+            });
+          }
+
+          if (failed) {
+            console.error('');
+            console.error('FAILED: az devops invoke --area search must use --resource workitemsearchresults (all lowercase); other casings can KeyError');
+            process.exit(1);
+          }
+
+          console.log('OK: no commands/**/*.md or agents/**/*.md teach az devops invoke --area search with a non-lowercase --resource workitemsearchresults');
+          EOF
+
       - name: Validate skill files have required frontmatter
         run: |
           echo "Validating skill files..."
