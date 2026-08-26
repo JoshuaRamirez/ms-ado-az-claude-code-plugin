@@ -666,6 +666,67 @@ jobs:
           console.log('OK: no commands/**/*.md or agents/**/*.md teach az devops invoke --area work --resource workitems');
           EOF
 
+      - name: Reject extra board route param on work --resource boards
+        run: |
+          echo "Checking command and agent files for extra board= on az devops invoke --area work --resource boards..."
+
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          function walk(dir, acc) {
+            if (!fs.existsSync(dir)) {
+              return acc;
+            }
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                walk(full, acc);
+              } else if (entry.isFile() && entry.name.endsWith('.md')) {
+                acc.push(full);
+              }
+            }
+            return acc;
+          }
+
+          const files = walk('commands', []).concat(walk('agents', []));
+          let failed = false;
+
+          for (const file of files) {
+            const folded = fs.readFileSync(file, 'utf8').replace(/\\\r?\n/g, ' ');
+            folded.split(/\r?\n/).forEach((line, idx) => {
+              if (!/\baz\s+devops\s+invoke\b/.test(line)) {
+                return;
+              }
+              const hasAreaWork = /(^|[\s])--area(\s+|=)["']?work\b/.test(line);
+              // Flag form only: --resource boards / --resource=boards
+              // (or nearby casing such as Boards). Quoted or unquoted.
+              // Do not match --resource columns (verified board= lives there)
+              // or --resource boardcolumns (already rejected).
+              const hasResourceBoards = /(^|[\s])--resource(\s+|=)["']?boards\b/i.test(line);
+              const routeParamsMatch = line.match(/(^|[\s])--route-parameters(?:\s+|=)(.+?)(?=\s+--|\s+-o\b|$)/);
+              const routeParams = routeParamsMatch && routeParamsMatch[2];
+              // Flag only a word-boundary board= key on --route-parameters
+              // (e.g. board={BOARD_NAME}, board=Features). Do not match
+              // prose that merely mentions board names.
+              const hasBoardRouteKey = routeParams && /\bboard=/.test(routeParams);
+              if (hasAreaWork && hasResourceBoards && hasBoardRouteKey) {
+                console.error('ERROR: ' + file + ':' + (idx + 1) + ' teaches az devops invoke --area work --resource boards with extra board= route parameter');
+                console.error('  ' + line.trim());
+                failed = true;
+              }
+            });
+          }
+
+          if (failed) {
+            console.error('');
+            console.error('FAILED: extra board= on az devops invoke --area work --resource boards is unverified and can KeyError; list boards with project+team only and use --resource columns for board=');
+            process.exit(1);
+          }
+
+          console.log('OK: no commands/**/*.md or agents/**/*.md teach extra board= on az devops invoke --area work --resource boards');
+          EOF
+
       - name: Reject unverified work --resource cardrulesettings PATCH on az devops invoke
         run: |
           echo "Checking command and agent files for az devops invoke --area work --resource cardrulesettings --http-method PATCH..."

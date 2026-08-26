@@ -9,6 +9,8 @@ Get all boards for a team.
 
 **Note**: Uses `az devops invoke` since CLI doesn't support boards directly.
 
+Getting a named board via extra `board=` on `--resource boards` is not on the verified path (extra route parameters can KeyError). List boards with `--resource boards` and route-parameters `project` and `team` only. To pick a named board, filter the list JSON by `name`. Column configuration for a named board belongs on `/ado:boards:columns` (verified `--resource columns` with `board=`).
+
 ## List Boards
 
 ```
@@ -16,7 +18,7 @@ az devops invoke \
   --area work \
   --resource boards \
   --route-parameters project={PROJECT} team={TEAM} \
-  --api-version 7.1 \
+  --api-version 7.0 \
   -o json
 ```
 
@@ -30,22 +32,17 @@ Returns array of boards with:
 - `columns` - Column definitions
 - `rows` - Swimlane definitions
 
-## Get Specific Board
-
-```
-az devops invoke \
-  --area work \
-  --resource boards \
-  --route-parameters project={PROJECT} team={TEAM} board={BOARD_NAME} \
-  --api-version 7.1 \
-  -o json
-```
-
-Board names are typically:
+Typical `name` values in the list response:
 - `Stories` - User stories/PBIs
 - `Epics` - Epic items
 - `Features` - Feature items
 - `Bugs` - Bug items (if using Bugs on board)
+
+## Pick a named board
+
+Filter the list JSON by `name` (for example `Features`). Do not add `board=` to `--resource boards`.
+
+For column configuration of a named board, use `/ado:boards:columns` (verified `--resource columns` with route-parameters `project`, `team`, and `board`).
 
 ## Common Teams
 
