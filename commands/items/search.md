@@ -31,10 +31,10 @@ Save to a temp file, e.g., `search_request.json`
 ```
 az devops invoke \
   --area search \
-  --resource workItemSearchResults \
+  --resource workitemsearchresults \
   --http-method POST \
   --in-file search_request.json \
-  --api-version 7.1-preview.1 \
+  --api-version 7.0 \
   -o json
 ```
 

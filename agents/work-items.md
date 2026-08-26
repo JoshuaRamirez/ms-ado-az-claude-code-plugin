@@ -55,7 +55,7 @@ For features CLI doesn't support, use `az devops invoke`.
 **Search work items:**
 ```bash
 # Create search.json with: {"searchText": "query", "$top": 25, "filters": {"System.TeamProject": ["Project"]}}
-az devops invoke --area search --resource workItemSearchResults --http-method POST --in-file search.json --api-version 7.1-preview.1 -o json
+az devops invoke --area search --resource workitemsearchresults --http-method POST --in-file search.json --api-version 7.0 -o json
 ```
 
 **Get/add comments:**
