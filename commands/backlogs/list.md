@@ -14,7 +14,7 @@ az devops invoke \
   --area work \
   --resource backlogs \
   --route-parameters project={PROJECT} team={TEAM} \
-  --api-version 7.1 \
+  --api-version 7.0 \
   -o json
 ```
 
@@ -51,20 +51,3 @@ Key fields:
 - `name` - Display name
 - `rank` - Order (1 = highest level)
 - `workItemTypes` - Work item types in this backlog
-
-## Get Specific Backlog Configuration
-
-```
-az devops invoke \
-  --area work \
-  --resource backlogconfiguration \
-  --route-parameters project={PROJECT} team={TEAM} \
-  --api-version 7.1 \
-  -o json
-```
-
-This returns detailed configuration including:
-- Portfolio backlog levels
-- Requirement backlog level
-- Task backlog level
-- Bug behavior settings

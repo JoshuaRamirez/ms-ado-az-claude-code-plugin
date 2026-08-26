@@ -82,9 +82,6 @@ az devops invoke --area work --resource columns --route-parameters project={P} t
 ```bash
 # List backlogs
 az devops invoke --area work --resource backlogs --route-parameters project={P} team={T} --api-version 7.1 -o json
-
-# Get backlog configuration
-az devops invoke --area work --resource backlogconfiguration --route-parameters project={P} team={T} --api-version 7.1 -o json
 ```
 
 ### Sprints/Iterations (CLI)
