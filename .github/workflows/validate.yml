@@ -340,6 +340,59 @@ jobs:
           console.log('OK: no commands/**/*.md pass --top to az boards query');
           EOF
 
+      - name: Reject unsupported wit --resource comments on az devops invoke
+        run: |
+          echo "Checking command and agent files for az devops invoke --area wit --resource comments..."
+
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          function walk(dir, acc) {
+            if (!fs.existsSync(dir)) {
+              return acc;
+            }
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                walk(full, acc);
+              } else if (entry.isFile() && entry.name.endsWith('.md')) {
+                acc.push(full);
+              }
+            }
+            return acc;
+          }
+
+          const files = walk('commands', []).concat(walk('agents', []));
+          let failed = false;
+
+          for (const file of files) {
+            const folded = fs.readFileSync(file, 'utf8').replace(/\\\r?\n/g, ' ');
+            folded.split(/\r?\n/).forEach((line, idx) => {
+              if (!/\baz\s+devops\s+invoke\b/.test(line)) {
+                return;
+              }
+              const hasAreaWit = /(^|[\s])--area(\s+|=)wit\b/.test(line);
+              // Flag form only: --resource comments / --resource=comments.
+              // Do not match prose "comments", /ado:items:comments, or --discussion.
+              const hasResourceComments = /(^|[\s])--resource(\s+|=)comments\b/.test(line);
+              if (hasAreaWit && hasResourceComments) {
+                console.error('ERROR: ' + file + ':' + (idx + 1) + ' teaches az devops invoke --area wit --resource comments');
+                console.error('  ' + line.trim());
+                failed = true;
+              }
+            });
+          }
+
+          if (failed) {
+            console.error('');
+            console.error('FAILED: az devops invoke --area wit --resource comments returns 404; use --discussion on az boards work-item update and revisions/System.History');
+            process.exit(1);
+          }
+
+          console.log('OK: no commands/**/*.md or agents/**/*.md teach az devops invoke --area wit --resource comments');
+          EOF
+
       - name: Validate skill files have required frontmatter
         run: |
           echo "Validating skill files..."
