@@ -12,7 +12,7 @@ View and update column settings on a board.
 ```
 az devops invoke \
   --area work \
-  --resource boardcolumns \
+  --resource columns \
   --route-parameters project={PROJECT} team={TEAM} board={BOARD} \
   --api-version 7.1 \
   -o json
@@ -72,7 +72,7 @@ Key fields:
 ```
 az devops invoke \
   --area work \
-  --resource boardcolumns \
+  --resource columns \
   --route-parameters project={PROJECT} team={TEAM} board={BOARD} \
   --http-method PUT \
   --in-file columns.json \
