@@ -273,7 +273,7 @@ az devops invoke -o json  # Lists all available APIs
 1. **Test your changes**: Verify commands work as expected
 2. **Update documentation**: Add examples and notes
 3. **Check frontmatter**: Ensure required fields are present
-4. **Validate structure**: Run the validation workflow locally if possible
+4. **Validate structure**: Run the validation workflow locally if possible. `.claude-plugin/marketplace.json` is required and must stay consistent with `plugin.json` (plugin name and version).
 
 ### Pull Request Process
 
