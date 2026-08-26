@@ -62,6 +62,13 @@ jobs:
           const MARKETPLACE_FILE = '.claude-plugin/marketplace.json';
           const PLUGIN_FILE = '.claude-plugin/plugin.json';
           const repoRoot = process.cwd();
+          let repoReal;
+          try {
+            repoReal = fs.realpathSync(repoRoot);
+          } catch (err) {
+            console.error('ERROR: could not resolve repository root:', repoRoot);
+            process.exit(1);
+          }
           let failed = false;
 
           function fail(msg) {
@@ -133,6 +140,12 @@ jobs:
                 ok(label + ' name: ' + entry.name);
               }
 
+              if (typeof entry.version !== 'string' || !entry.version.trim()) {
+                fail(label + ' missing required field: version');
+              } else {
+                ok(label + ' version: ' + entry.version);
+              }
+
               if (entry.source == null || entry.source === '') {
                 fail(label + ' missing required field: source');
                 return;
@@ -145,17 +158,28 @@ jobs:
                   return;
                 }
                 const resolved = path.resolve(repoRoot, entry.source);
-                const relative = path.relative(repoRoot, resolved);
-                if (relative.startsWith('..') || path.isAbsolute(relative)) {
-                  fail(label + ' source path escapes the repository: ' + entry.source);
-                  return;
-                }
-                if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
+                if (!fs.existsSync(resolved)) {
                   fail(label + ' source path does not resolve to a directory: ' + entry.source);
                   return;
                 }
-                ok(label + ' source resolves: ' + entry.source + ' -> ' + (relative || '.'));
-                sourceDir = resolved;
+                let sourceReal;
+                try {
+                  sourceReal = fs.realpathSync(resolved);
+                } catch (err) {
+                  fail(label + ' source path does not resolve to a directory: ' + entry.source);
+                  return;
+                }
+                if (!fs.statSync(sourceReal).isDirectory()) {
+                  fail(label + ' source path does not resolve to a directory: ' + entry.source);
+                  return;
+                }
+                const relativeReal = path.relative(repoReal, sourceReal);
+                if (relativeReal.startsWith('..') || path.isAbsolute(relativeReal)) {
+                  fail(label + ' source real path escapes the repository: ' + entry.source + ' -> ' + sourceReal);
+                  return;
+                }
+                ok(label + ' source resolves: ' + entry.source + ' -> ' + (relativeReal || '.'));
+                sourceDir = sourceReal;
               } else if (typeof entry.source === 'object') {
                 if (typeof entry.source.source !== 'string' || !entry.source.source.trim()) {
                   fail(label + ' object source must include a source type');
@@ -178,9 +202,11 @@ jobs:
                     } else if (entry.name) {
                       ok(label + ' name matches plugin.json: ' + sourced.name);
                     }
-                    if (entry.version !== sourced.version) {
-                      fail(label + ' version ' + JSON.stringify(entry.version) + ' does not match plugin.json version ' + JSON.stringify(sourced.version));
-                    } else {
+                    if (typeof sourced.version !== 'string' || !sourced.version.trim()) {
+                      fail(label + ' source plugin.json is missing required field: version');
+                    } else if (typeof entry.version === 'string' && entry.version.trim() && entry.version !== sourced.version) {
+                      fail(label + ' version "' + entry.version + '" does not match plugin.json version "' + sourced.version + '"');
+                    } else if (typeof entry.version === 'string' && entry.version.trim()) {
                       ok(label + ' version matches plugin.json: ' + sourced.version);
                     }
                   } catch (err) {
