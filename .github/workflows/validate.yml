@@ -258,6 +258,53 @@ jobs:
           echo ""
           echo "All command files validated successfully"
 
+      - name: Reject unsupported --top on az boards query
+        run: |
+          echo "Checking command files for az boards query --top..."
+
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          function walk(dir, acc) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                walk(full, acc);
+              } else if (entry.isFile() && entry.name.endsWith('.md')) {
+                acc.push(full);
+              }
+            }
+            return acc;
+          }
+
+          const files = fs.existsSync('commands') ? walk('commands', []) : [];
+          let failed = false;
+
+          for (const file of files) {
+            const folded = fs.readFileSync(file, 'utf8').replace(/\\\r?\n/g, ' ');
+            folded.split(/\r?\n/).forEach((line, idx) => {
+              if (!/\baz\s+boards\s+query\b/.test(line)) {
+                return;
+              }
+              // Flag form only: --top / --top=N. Do not match --query or Search API "$top".
+              if (/(^|[\s])--top(\s|=|$)/.test(line)) {
+                console.error('ERROR: ' + file + ':' + (idx + 1) + ' passes --top to az boards query');
+                console.error('  ' + line.trim());
+                failed = true;
+              }
+            });
+          }
+
+          if (failed) {
+            console.error('');
+            console.error('FAILED: az boards query does not support --top; use --query "[:N]" or pipe to head');
+            process.exit(1);
+          }
+
+          console.log('OK: no commands/**/*.md pass --top to az boards query');
+          EOF
+
       - name: Validate skill files have required frontmatter
         run: |
           echo "Validating skill files..."

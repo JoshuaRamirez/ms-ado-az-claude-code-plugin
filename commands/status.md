@@ -43,13 +43,15 @@ If either is blank, run `/ado:setup` to configure.
 
 ## Step 4: Test Connectivity
 
-Run a simple query to verify authentication and access:
+Read the configured project from Step 3 (`az devops configure --list`). If project is blank, report connectivity FAILED and tell the user to run `/ado:setup`.
+
+Otherwise run a live project lookup to verify authentication and access:
 
 ```bash
-az boards query --wiql "SELECT [System.Id], [System.Title] FROM workitems WHERE [System.TeamProject] = @project" -o table --top 1
+az devops project show --project {PROJECT}
 ```
 
-If this succeeds, the configuration is working.
+If this succeeds, the configuration is working. This check works even when the project has no work items.
 
 ## Interpreting Results
 
@@ -104,7 +106,7 @@ Configuration:
   Organization: https://dev.azure.com/yourorg
   Project:      YourProject
 
-Connectivity:    OK (query returned successfully)
+Connectivity:    OK (project show returned successfully)
 
 Status: Ready to use
 ```
