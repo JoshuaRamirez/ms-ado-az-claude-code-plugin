@@ -707,9 +707,10 @@ jobs:
               const routeParamsMatch = line.match(/(^|[\s])--route-parameters(?:\s+|=)(.+?)(?=\s+--|\s+-o\b|$)/);
               const routeParams = routeParamsMatch && routeParamsMatch[2];
               // Flag only a word-boundary board= key on --route-parameters
-              // (e.g. board={BOARD_NAME}, board=Features). Do not match
-              // prose that merely mentions board names.
-              const hasBoardRouteKey = routeParams && /\bboard=/.test(routeParams);
+              // (e.g. board={BOARD_NAME}, board=Features, or nearby casing
+              // such as Board= / BOARD=). Do not match prose that merely
+              // mentions board names.
+              const hasBoardRouteKey = routeParams && /\bboard=/i.test(routeParams);
               if (hasAreaWork && hasResourceBoards && hasBoardRouteKey) {
                 console.error('ERROR: ' + file + ':' + (idx + 1) + ' teaches az devops invoke --area work --resource boards with extra board= route parameter');
                 console.error('  ' + line.trim());
