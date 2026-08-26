@@ -1,11 +1,13 @@
 ---
-description: View and manage team capacity for a sprint
-allowed-tools: Bash(az devops invoke:*), Bash(echo:*), Write
+description: View team capacity for a sprint
+allowed-tools: Bash(az devops invoke:*), Bash(echo:*)
 ---
 
 # Sprint Capacity
 
-Manage team member capacity for an iteration.
+View team member capacity for an iteration.
+
+Updating member capacity via `az devops invoke --http-method PATCH` is not on the verified path (`az devops invoke` PATCH can KeyError on some resources). This command is GET/view only.
 
 ## Get Team Capacities
 
@@ -49,35 +51,6 @@ az devops invoke \
   --area work \
   --resource iterationcapacities \
   --route-parameters project={PROJECT} team={TEAM} iterationId={ITERATION_ID} \
-  --api-version 7.1 \
-  -o json
-```
-
-## Update Member Capacity
-
-### Step 1: Create capacity JSON
-
-```json
-{
-  "activities": [
-    {
-      "name": "Development",
-      "capacityPerDay": 6
-    }
-  ],
-  "daysOff": []
-}
-```
-
-### Step 2: Update capacity
-
-```
-az devops invoke \
-  --area work \
-  --resource capacities \
-  --route-parameters project={PROJECT} team={TEAM} iterationId={ITERATION_ID} teamMemberId={MEMBER_ID} \
-  --http-method PATCH \
-  --in-file capacity.json \
   --api-version 7.1 \
   -o json
 ```
