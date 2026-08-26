@@ -444,6 +444,60 @@ jobs:
           console.log('OK: no commands/**/*.md or agents/**/*.md teach relation add/remove with --relation-type System.LinkTypes.*');
           EOF
 
+      - name: Reject unverified work --resource boardcolumns on az devops invoke
+        run: |
+          echo "Checking command and agent files for az devops invoke --area work --resource boardcolumns..."
+
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          function walk(dir, acc) {
+            if (!fs.existsSync(dir)) {
+              return acc;
+            }
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                walk(full, acc);
+              } else if (entry.isFile() && entry.name.endsWith('.md')) {
+                acc.push(full);
+              }
+            }
+            return acc;
+          }
+
+          const files = walk('commands', []).concat(walk('agents', []));
+          let failed = false;
+
+          for (const file of files) {
+            const folded = fs.readFileSync(file, 'utf8').replace(/\\\r?\n/g, ' ');
+            folded.split(/\r?\n/).forEach((line, idx) => {
+              if (!/\baz\s+devops\s+invoke\b/.test(line)) {
+                return;
+              }
+              const hasAreaWork = /(^|[\s])--area(\s+|=)["']?work\b/.test(line);
+              // Flag form only: --resource boardcolumns / --resource=boardcolumns.
+              // Quoted or unquoted. Do not match prose "board columns",
+              // /ado:boards:columns, or the verified --resource columns.
+              const hasResourceBoardcolumns = /(^|[\s])--resource(\s+|=)["']?boardcolumns\b/.test(line);
+              if (hasAreaWork && hasResourceBoardcolumns) {
+                console.error('ERROR: ' + file + ':' + (idx + 1) + ' teaches az devops invoke --area work --resource boardcolumns');
+                console.error('  ' + line.trim());
+                failed = true;
+              }
+            });
+          }
+
+          if (failed) {
+            console.error('');
+            console.error('FAILED: az devops invoke --area work --resource boardcolumns is unverified and can KeyError; use --resource columns');
+            process.exit(1);
+          }
+
+          console.log('OK: no commands/**/*.md or agents/**/*.md teach az devops invoke --area work --resource boardcolumns');
+          EOF
+
       - name: Validate skill files have required frontmatter
         run: |
           echo "Validating skill files..."

@@ -74,7 +74,7 @@ az devops invoke --area wit --resource revisions --route-parameters project={P} 
 az devops invoke --area work --resource boards --route-parameters project={P} team={T} --api-version 7.1 -o json
 
 # Get board columns
-az devops invoke --area work --resource boardcolumns --route-parameters project={P} team={T} board={B} --api-version 7.1 -o json
+az devops invoke --area work --resource columns --route-parameters project={P} team={T} board={B} --api-version 7.1 -o json
 ```
 
 ### Backlogs (REST API)
