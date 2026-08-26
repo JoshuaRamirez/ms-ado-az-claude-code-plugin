@@ -393,6 +393,57 @@ jobs:
           console.log('OK: no commands/**/*.md or agents/**/*.md teach az devops invoke --area wit --resource comments');
           EOF
 
+      - name: Reject System.LinkTypes reference names on relation add/remove
+        run: |
+          echo "Checking command and agent files for az boards work-item relation add/remove --relation-type System.LinkTypes.*..."
+
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          function walk(dir, acc) {
+            if (!fs.existsSync(dir)) {
+              return acc;
+            }
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                walk(full, acc);
+              } else if (entry.isFile() && entry.name.endsWith('.md')) {
+                acc.push(full);
+              }
+            }
+            return acc;
+          }
+
+          const files = walk('commands', []).concat(walk('agents', []));
+          let failed = false;
+
+          for (const file of files) {
+            const folded = fs.readFileSync(file, 'utf8').replace(/\\\r?\n/g, ' ');
+            folded.split(/\r?\n/).forEach((line, idx) => {
+              if (!/\baz\s+boards\s+work-item\s+relation\s+(add|remove)\b/.test(line)) {
+                return;
+              }
+              // Flag form only: --relation-type System.LinkTypes... / --relation-type=System.LinkTypes...
+              // Quoted or unquoted. Do not match prose that merely mentions System.LinkTypes.
+              if (/(^|[\s])--relation-type(\s+|=)["']?System\.LinkTypes\./.test(line)) {
+                console.error('ERROR: ' + file + ':' + (idx + 1) + ' teaches az boards work-item relation add/remove with --relation-type System.LinkTypes.*');
+                console.error('  ' + line.trim());
+                failed = true;
+              }
+            });
+          }
+
+          if (failed) {
+            console.error('');
+            console.error('FAILED: --relation-type must use friendly names (Parent, Child, Related), not System.LinkTypes.* reference names');
+            process.exit(1);
+          }
+
+          console.log('OK: no commands/**/*.md or agents/**/*.md teach relation add/remove with --relation-type System.LinkTypes.*');
+          EOF
+
       - name: Validate skill files have required frontmatter
         run: |
           echo "Validating skill files..."

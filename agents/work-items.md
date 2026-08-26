@@ -43,7 +43,9 @@ az boards query --wiql "SELECT [System.Id], [System.Title] FROM WorkItems WHERE 
 
 **Link work items:**
 ```bash
-az boards work-item relation add --id {ID} --relation-type {TYPE} --target-id {TARGET_ID}
+# Use friendly names only: "Parent", "Child", "Related" (not System.LinkTypes.*)
+# "Parent" on A targeting B makes A a child of B; "Child" on A targeting B makes A the parent of B
+az boards work-item relation add --id {ID} --relation-type "Parent" --target-id {TARGET_ID}
 ```
 
 ### Work Items (REST API via invoke)
