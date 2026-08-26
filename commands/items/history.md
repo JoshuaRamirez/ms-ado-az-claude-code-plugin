@@ -115,5 +115,5 @@ Use revision history for compliance or debugging to understand how an item evolv
 
 - Revision 1 is always the creation event
 - Each revision captures the complete state of the work item at that point
-- Comments are not included in revisions - use the comments command for discussion history
+- Discussion comments are `System.History` on the revision that added them. Use `/ado:items:comments` to list or add comments.
 - Large work items with many revisions may return a significant amount of data

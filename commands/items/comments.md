@@ -1,100 +1,70 @@
 ---
 description: View and add comments on work items
-allowed-tools: Bash(az devops invoke:*), Bash(echo:*), Write
+allowed-tools: Bash(az boards work-item update:*), Bash(az devops invoke:*)
 ---
 
 # Work Item Comments
 
 View and add discussion comments on work items.
 
-**Note**: Uses `az devops invoke` since CLI doesn't support comments.
-
-## List Comments
-
-```
-az devops invoke \
-  --area wit \
-  --resource comments \
-  --route-parameters project={PROJECT} workItemId={ID} \
-  --api-version 7.1-preview.4 \
-  -o json
-```
-
-Response contains `comments` array with:
-- `id` - Comment ID
-- `text` - Comment content (may contain HTML)
-- `createdBy` - Author info
-- `createdDate` - Timestamp
-- `modifiedDate` - Last edit timestamp
+Add a comment with `az boards work-item update --discussion`. Discussion text is stored as `System.History` on the work-item revision that added it.
 
 ## Add a Comment
 
-### Step 1: Create comment JSON
-
-```json
-{
-  "text": "Your comment text here. Can include <b>HTML</b> formatting."
-}
+```bash
+az boards work-item update --id {ID} --discussion "This is a comment" -o json
 ```
 
-Save to temp file, e.g., `comment.json`
+You can also add a comment while updating other fields:
 
-### Step 2: Post comment
-
-```
-az devops invoke \
-  --area wit \
-  --resource comments \
-  --route-parameters project={PROJECT} workItemId={ID} \
-  --http-method POST \
-  --in-file comment.json \
-  --api-version 7.1-preview.4 \
+```bash
+az boards work-item update --id {ID} \
+  --state "Resolved" \
+  --discussion "Fixed in commit abc123. Please verify." \
   -o json
 ```
 
-## Update a Comment
+## List Comments
 
-### Step 1: Create update JSON
+Discussion comments live on work item revisions as `System.History`. Use the same revisions invoke as `/ado:items:history`:
 
-```json
-{
-  "text": "Updated comment text"
-}
-```
-
-### Step 2: Patch comment
-
-```
+```bash
 az devops invoke \
   --area wit \
-  --resource comments \
-  --route-parameters project={PROJECT} workItemId={ID} commentId={COMMENT_ID} \
-  --http-method PATCH \
-  --in-file comment_update.json \
-  --api-version 7.1-preview.4 \
+  --resource revisions \
+  --route-parameters project={PROJECT} id={ID} \
+  --api-version 7.1 \
   -o json
 ```
 
-## Delete a Comment
+**Note**: The `project` parameter should match your configured project. You can check it with `az devops configure --list`.
 
-```
+Each revision that added a discussion comment includes:
+- `rev` - Revision number
+- `fields.System.ChangedDate` - When the comment was added
+- `fields.System.ChangedBy` - Who added it
+- `fields.System.History` - The discussion text
+
+Revisions that did not add a comment typically omit `System.History`. Filter to revisions that have that field.
+
+Optional JMESPath to project comment fields:
+
+```bash
 az devops invoke \
   --area wit \
-  --resource comments \
-  --route-parameters project={PROJECT} workItemId={ID} commentId={COMMENT_ID} \
-  --http-method DELETE \
-  --api-version 7.1-preview.4
+  --resource revisions \
+  --route-parameters project={PROJECT} id={ID} \
+  --api-version 7.1 \
+  --query "[?fields.\"System.History\"].{rev:rev, date:fields.\"System.ChangedDate\", by:fields.\"System.ChangedBy\", comment:fields.\"System.History\"}" \
+  -o json
 ```
 
-## Formatting Tips
+## Edit or Delete a Comment
 
-Comments support HTML:
-- `<b>bold</b>`, `<i>italic</i>`
-- `<a href="url">link</a>`
-- `<ul><li>list items</li></ul>`
-- `@mention` for user mentions
-- `#123` for work item links
+Editing or deleting an existing comment is not available on the verified CLI path. Add a new discussion comment instead.
 
-## Clean Up
+## Notes
 
-Delete temp JSON files after operations complete.
+- `--discussion` is the verified way to add a comment
+- Listing uses work-item revisions (`--resource revisions`), not a separate comments resource
+- Discussion text is `System.History` on the revision that added it

@@ -58,11 +58,11 @@ az devops invoke --area search --resource workItemSearchResults --http-method PO
 
 **Get/add comments:**
 ```bash
-# List comments
-az devops invoke --area wit --resource comments --route-parameters project={P} workItemId={ID} --api-version 7.1-preview.4 -o json
+# Add a discussion comment
+az boards work-item update --id {ID} --discussion "This is a comment" -o json
 
-# Add comment (create comment.json with: {"text": "Comment"})
-az devops invoke --area wit --resource comments --route-parameters project={P} workItemId={ID} --http-method POST --in-file comment.json --api-version 7.1-preview.4 -o json
+# List comments: discussion text is System.History on the revision that added it
+az devops invoke --area wit --resource revisions --route-parameters project={P} id={ID} --api-version 7.1 -o json
 ```
 
 ### Boards (REST API)
