@@ -1,62 +1,44 @@
 ---
-description: Get work items from a backlog
-allowed-tools: Bash(az devops invoke:*)
+description: Get work items from a backlog level using WIQL
+allowed-tools: Bash(az boards query:*), Bash(az devops invoke:*)
 ---
 
 # Backlog Work Items
 
 Get work items in a specific backlog level.
 
-## Get Backlog Items
+Getting backlog items via `az devops invoke` `--resource workitems`, or extra `backlogId` on `--resource backlogs`, is not on the verified path (unverified resources and extra route parameters can KeyError). Use WIQL (`az boards query`) to get work items. Discover backlog levels with `/ado:backlogs:list` or the verified Get Backlogs invoke below.
+
+## Discover backlog levels
 
 ```
 az devops invoke \
   --area work \
   --resource backlogs \
-  --route-parameters project={PROJECT} team={TEAM} backlogId={BACKLOG_ID} \
-  --resource workitems \
-  --api-version 7.1 \
+  --route-parameters project={PROJECT} team={TEAM} \
+  --api-version 7.0 \
   -o json
 ```
 
-Common backlog IDs:
-- `Microsoft.EpicCategory` - Epics
-- `Microsoft.FeatureCategory` - Features
-- `Microsoft.RequirementCategory` - Stories/PBIs
+Returns backlog levels with `id`, `name`, `rank`, and `workItemTypes`. Use those types in WIQL. Do not pass `backlogId` as an invoke route parameter.
 
-## Example: Get Stories Backlog
+Common work item types by backlog level:
+- Epics: `Epic`
+- Features: `Feature`
+- Stories/PBIs: `User Story` (or `Product Backlog Item`; may include `Bug`)
+
+## Get work items in a backlog level (WIQL)
+
+Filter by work item type and team area (and iteration when needed):
 
 ```
-az devops invoke \
-  --area work \
-  --resource backlogs \
-  --route-parameters project={PROJECT} team={TEAM} backlogId=Microsoft.RequirementCategory \
-  --query-parameters "\$top=50" \
-  --api-version 7.1 \
-  -o json
+az boards query --wiql "SELECT [System.Id], [System.Title], [Microsoft.VSTS.Common.BacklogPriority] FROM WorkItems WHERE [System.WorkItemType] = 'User Story' AND [System.AreaPath] UNDER '{TEAM_AREA}' ORDER BY [Microsoft.VSTS.Common.BacklogPriority]" -o json
 ```
 
-## Response Format
+## Example: Stories in an iteration
 
-Returns work item references with:
-- `target.id` - Work item ID
-- `target.url` - API URL to get full item
-
-To get full details, use the IDs with `az boards work-item show` or batch get.
-
-## Get Items with Order
-
-The response includes `rel` field showing parent relationships if items are nested.
-
-## Pagination
-
-Use query parameters:
-- `$top` - Number of items to return
-- `$skip` - Number to skip (for paging)
-
-## Alternative: WIQL Query
-
-For more control, use WIQL:
 ```
-az boards query --wiql "SELECT [System.Id], [System.Title], [Microsoft.VSTS.Common.BacklogPriority] FROM WorkItems WHERE [System.WorkItemType] = 'User Story' AND [System.AreaPath] UNDER '{TEAM_AREA}' ORDER BY [Microsoft.VSTS.Common.BacklogPriority]"
+az boards query --wiql "SELECT [System.Id], [System.Title], [System.State], [Microsoft.VSTS.Common.BacklogPriority] FROM WorkItems WHERE [System.WorkItemType] IN ('User Story', 'Bug') AND [System.AreaPath] UNDER '{TEAM_AREA}' AND [System.IterationPath] UNDER '{ITERATION}' ORDER BY [Microsoft.VSTS.Common.BacklogPriority]" -o json
 ```
+
+To get full details, use the IDs with `az boards work-item show`.
