@@ -51,22 +51,159 @@ jobs:
             console.log('  description:', plugin.description);
           "
 
-      - name: Validate marketplace.json (if exists)
+      - name: Validate marketplace.json
         run: |
-          MARKETPLACE_FILE=".claude-plugin/marketplace.json"
+          echo "Validating marketplace.json..."
 
-          if [ -f "$MARKETPLACE_FILE" ]; then
-            echo "Validating marketplace.json..."
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
 
-            if ! node -e "JSON.parse(require('fs').readFileSync('$MARKETPLACE_FILE', 'utf8'))"; then
-              echo "ERROR: $MARKETPLACE_FILE contains invalid JSON"
-              exit 1
-            fi
+          const MARKETPLACE_FILE = '.claude-plugin/marketplace.json';
+          const PLUGIN_FILE = '.claude-plugin/plugin.json';
+          const repoRoot = process.cwd();
+          let failed = false;
 
-            echo "marketplace.json validation passed"
-          else
-            echo "No marketplace.json found (optional)"
-          fi
+          function fail(msg) {
+            console.error('ERROR:', msg);
+            failed = true;
+          }
+
+          function ok(msg) {
+            console.log('OK:', msg);
+          }
+
+          if (!fs.existsSync(MARKETPLACE_FILE)) {
+            console.error('ERROR:', MARKETPLACE_FILE, 'not found (required for marketplace install)');
+            process.exit(1);
+          }
+          ok(MARKETPLACE_FILE + ' exists');
+
+          let marketplace;
+          try {
+            marketplace = JSON.parse(fs.readFileSync(MARKETPLACE_FILE, 'utf8'));
+          } catch (err) {
+            console.error('ERROR:', MARKETPLACE_FILE, 'contains invalid JSON');
+            console.error(err.message);
+            process.exit(1);
+          }
+          ok('valid JSON');
+
+          if (typeof marketplace.name !== 'string' || !marketplace.name.trim()) {
+            fail('missing required top-level field: name');
+          } else {
+            ok('top-level name: ' + marketplace.name);
+          }
+
+          if (!marketplace.owner || typeof marketplace.owner !== 'object' || Array.isArray(marketplace.owner)) {
+            fail('missing required top-level field: owner (must be an object)');
+          } else if (typeof marketplace.owner.name !== 'string' || !marketplace.owner.name.trim()) {
+            fail('owner.name is required');
+          } else {
+            ok('owner.name: ' + marketplace.owner.name);
+          }
+
+          if (!Array.isArray(marketplace.plugins)) {
+            fail('missing required top-level field: plugins (must be an array)');
+          } else if (marketplace.plugins.length === 0) {
+            fail('plugins array is empty');
+          } else {
+            ok('plugins: ' + marketplace.plugins.length + ' entry/entries');
+          }
+
+          let pluginJson = null;
+          try {
+            pluginJson = JSON.parse(fs.readFileSync(PLUGIN_FILE, 'utf8'));
+            ok('loaded ' + PLUGIN_FILE + ' for identity comparison');
+          } catch (err) {
+            fail('could not read ' + PLUGIN_FILE + ' for identity comparison');
+          }
+
+          if (Array.isArray(marketplace.plugins)) {
+            marketplace.plugins.forEach((entry, index) => {
+              const label = 'plugins[' + index + ']';
+              if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+                fail(label + ' must be an object');
+                return;
+              }
+
+              if (typeof entry.name !== 'string' || !entry.name.trim()) {
+                fail(label + ' missing required field: name');
+              } else {
+                ok(label + ' name: ' + entry.name);
+              }
+
+              if (entry.source == null || entry.source === '') {
+                fail(label + ' missing required field: source');
+                return;
+              }
+
+              let sourceDir = null;
+              if (typeof entry.source === 'string') {
+                if (!entry.source.startsWith('./')) {
+                  fail(label + ' source path must start with ./ (got ' + JSON.stringify(entry.source) + ')');
+                  return;
+                }
+                const resolved = path.resolve(repoRoot, entry.source);
+                const relative = path.relative(repoRoot, resolved);
+                if (relative.startsWith('..') || path.isAbsolute(relative)) {
+                  fail(label + ' source path escapes the repository: ' + entry.source);
+                  return;
+                }
+                if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
+                  fail(label + ' source path does not resolve to a directory: ' + entry.source);
+                  return;
+                }
+                ok(label + ' source resolves: ' + entry.source + ' -> ' + (relative || '.'));
+                sourceDir = resolved;
+              } else if (typeof entry.source === 'object') {
+                if (typeof entry.source.source !== 'string' || !entry.source.source.trim()) {
+                  fail(label + ' object source must include a source type');
+                } else {
+                  ok(label + ' remote source type: ' + entry.source.source);
+                }
+              } else {
+                fail(label + ' source must be a relative path string or a source object');
+              }
+
+              if (sourceDir) {
+                const nestedPlugin = path.join(sourceDir, '.claude-plugin', 'plugin.json');
+                if (!fs.existsSync(nestedPlugin)) {
+                  fail(label + ' source directory has no .claude-plugin/plugin.json');
+                } else {
+                  try {
+                    const sourced = JSON.parse(fs.readFileSync(nestedPlugin, 'utf8'));
+                    if (entry.name && entry.name !== sourced.name) {
+                      fail(label + ' name "' + entry.name + '" does not match ' + path.relative(repoRoot, nestedPlugin) + ' name "' + sourced.name + '"');
+                    } else if (entry.name) {
+                      ok(label + ' name matches plugin.json: ' + sourced.name);
+                    }
+                    if (entry.version !== sourced.version) {
+                      fail(label + ' version ' + JSON.stringify(entry.version) + ' does not match plugin.json version ' + JSON.stringify(sourced.version));
+                    } else {
+                      ok(label + ' version matches plugin.json: ' + sourced.version);
+                    }
+                  } catch (err) {
+                    fail(label + ' source plugin.json is not valid JSON');
+                  }
+                }
+              }
+
+              if (pluginJson && entry.name && entry.name !== pluginJson.name) {
+                fail(label + ' name "' + entry.name + '" does not match repo plugin.json name "' + pluginJson.name + '"');
+              }
+            });
+          }
+
+          if (failed) {
+            console.error('');
+            console.error('FAILED: marketplace.json validation errors');
+            process.exit(1);
+          }
+
+          console.log('');
+          console.log('marketplace.json validation passed');
+          EOF
 
       - name: Validate command files have required frontmatter
         run: |
