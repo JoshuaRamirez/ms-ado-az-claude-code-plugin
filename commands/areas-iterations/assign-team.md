@@ -1,11 +1,13 @@
 ---
 description: Assign areas and iterations to a team
-allowed-tools: Bash(az boards area:*), Bash(az boards iteration:*), Bash(az devops invoke:*)
+allowed-tools: Bash(az boards area:*), Bash(az boards iteration:*)
 ---
 
 # Assign Areas/Iterations to Team
 
 Configure which areas and iterations a team owns.
+
+Getting complete team configuration via invoke `--resource teamsettings` is not on the verified path (unverified resources can KeyError). Use `az boards area team *` and `az boards iteration team *`.
 
 ## View Team's Current Areas
 
@@ -74,24 +76,3 @@ New work items default to this iteration:
 ```
 az boards iteration team set-default-iteration --team {TEAM} --id {ITERATION_ID}
 ```
-
----
-
-## Get Team Settings (All Config)
-
-For complete team configuration via API:
-```
-az devops invoke \
-  --area work \
-  --resource teamsettings \
-  --route-parameters project={PROJECT} team={TEAM} \
-  --api-version 7.1 \
-  -o json
-```
-
-Shows:
-- backlogIteration
-- defaultIteration
-- bugsBehavior (Off, AsRequirements, AsTasks)
-- workingDays
-- backlogVisibilities
