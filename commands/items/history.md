@@ -76,16 +76,7 @@ To identify what changed between revisions, compare the field values across cons
 
 ## Getting a Specific Revision
 
-To view the work item as it was at a specific revision:
-
-```bash
-az devops invoke \
-  --area wit \
-  --resource revisions \
-  --route-parameters project={PROJECT} id={ID} revisionNumber={REV} \
-  --api-version 7.1 \
-  -o json
-```
+Extra `revisionNumber=` on `--resource revisions` is not on the adopted path (extra route parameters can KeyError). To view a specific revision, filter the list JSON by `rev`.
 
 ## Getting Current Revision Number
 
